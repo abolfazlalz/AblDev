@@ -2,30 +2,26 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/segmentio/kafka-go"
 )
 
 func main() {
-	// Writer برای ارسال پیام به Kafka
-	w := kafka.NewWriter(kafka.WriterConfig{
-		Brokers: []string{"localhost:9092"}, // آدرس Kafka Broker که با compose اجرا کردیم
+	// Reader برای دریافت پیام از Kafka
+	r := kafka.NewReader(kafka.ReaderConfig{
+		Brokers: []string{"localhost:9092"}, // آدرس بروکر
 		Topic:   "test-topic",               // نام تاپیک
+		GroupID: "my-group",                 // نام گروه کانسیومر
 	})
 
-	// ۱۰ تا پیام به تاپیک ارسال می کنیم
-	for i := 1; i <= 10; i++ {
-		msg := kafka.Message{
-			Key:   []byte(fmt.Sprintf("Key-%d", i)),
-			Value: []byte(fmt.Sprintf("Hello Kafka %d", i)),
+	// حلقه برای دریافت پیام ها
+	for {
+		// خواندن یک پیام
+		m, err := r.ReadMessage(context.Background())
+		if err != nil {
+			log.Fatal("failed to read message:", err)
 		}
-		if err := w.WriteMessages(context.Background(), msg); err != nil {
-			log.Fatal("failed to write messages:", err)
-		}
-		log.Printf("Message %d sent!", i)
+		log.Printf("Message received: key=%s value=%s\n", string(m.Key), string(m.Value))
 	}
-
-	w.Close()
 }
